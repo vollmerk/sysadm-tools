@@ -1,0 +1,14 @@
+#!/bin/bash
+# On push update the puppet environment for this user
+# only do this if it's the master branch which is being pushed
+SOURCEGITDIR=/tmp
+PUPPETENV=devl
+
+while read oldrev newrev refname
+do
+  branch=$(git rev-parse --symbolic --abbrev-ref $refname)
+  if [ "master" == "$branch" ]; then
+    echo "Updating ${PUPPETENV} Puppet Environment from Master"
+    git --git-dir=$SOURCEGITDIR --work-tree=/etc/puppet/environment/$PUPPETENV checkout -f
+  fi
+done

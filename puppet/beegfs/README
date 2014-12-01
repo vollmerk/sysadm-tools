@@ -1,0 +1,74 @@
+=== BEEGFS manifests ===
+
+  These are pretty basic, config files are used in decending order
+
+  $FQDN,$DOMAIN,default
+
+  The config files are located in ./modules/beegfs/files/[service]/ just
+  add accordingly. 
+
+  puppet apply [metadata.pp|admon.pp] --modulepath=modules
+
+=== Setting your system up for BEEGFS ===
+
+ Information taken from - http://www.fhgfs.com/wiki/ManualInstallWalkThrough#config_startup
+
+ 1. Create/Select Filesystems
+
+  You'll need a metadata partition that supports extents, EXT4 supports it you should be able to 
+  adjust the mount by adding user_xattrs to the mount options. If creating a new partition
+  then the following is a recommended formating line
+
+    mkfs.ext4 -i 2048 -I 512 -J size=400 -Odir_index,filetype,^extents /dev/sdX
+
+ 2. Set the Disk scheduler to deadline
+
+  Set the scheduler for your metadata disks to deadline to preference responsiveness over fairness
+
+    echo deadline > /sys/block/sdX/queue/scheduler
+
+ 3. Disable redhat_transparent_hugepage for RHEL systems
+
+  According to BeeGFS folks this causes performance and stability issues under high load and should be disabled
+
+    echo never > /sys/kernel/mm/redhat_transparent_hugepage/enabled
+
+  On non-RHEL systems it can be done using the following method
+
+    echo never > /sys/kernel/mm/transparent_hugepage/enabled
+
+ 4. Install Management server
+
+   This system doesn't do any real work just coordinates the whole thing,
+   this can be on any system connected to all others.
+
+ 5. Install Admon server
+
+   The pretty interface, I would recommend installing this on the same system
+   as the management server, configure it to point at the management server
+
+ 6. Install Metadata server
+ 
+   Update the config file with your management server, and the location for
+   your metadata. 
+
+ 7. Install Storage server
+
+   Update the config file with your management server, and the location to
+   be mounted as an available storage source
+
+ 8. Install client
+
+   Point the client at the management server, adjust any build flags that
+   make sense for your environment
+
+ 9. Setup mount
+
+   Reference the /etc/fhgfs/fhgfs-client.conf config file, see "default" 
+   example, format is 
+
+     /path/to/mount /path/to/client/configfile
+
+ 10. Verify using the Admon server (Java App)
+
+   Verify that everything is working using the admon server Java app

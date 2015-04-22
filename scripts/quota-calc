@@ -1,0 +1,8 @@
+#!/usr/bin/env python
+# vim: set softtabstop=2 ts=2 sw=2 expandtab: 
+import sys
+
+# Take the first argument as a # in GB that we need to output a quota value for
+gbsize = int(sys.argv[1])
+
+print (gbsize*1024*1024*1024)/512

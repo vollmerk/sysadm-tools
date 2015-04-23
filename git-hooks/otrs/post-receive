@@ -1,0 +1,21 @@
+#!/usr/bin/env ruby 
+require 'shellwords'
+
+refs = ARGF.read
+repo_path = Dir.pwd
+
+info = refs.split(' ')
+revisions = `git rev-parse #{info.at(2)} | git rev-list --stdin #{info.at(0)}..#{info.at(1)}`.split("\n")
+for index in 0 ... revisions.size
+        rev = revisions[index]
+        log = `git log #{rev}~1..#{rev} | sed '1,3d'`
+        log.delete!("\n")
+        if log.index(/.*#(\d+).*\Z/) != nil
+                issue = log.scan(/.*#(\d+).*\Z/).last.first
+                subject = "TICKET##{issue} GITLAB Automated commit message"
+                cmd = "echo #{Shellwords.escape(log)} | mailx -r \"GITLAB <gitlab@gitlabserver>\" -s \"#{subject}\" emailimport@support.yourorg.otrs"
+                `#{cmd}`
+                puts "E-mail ticket Update for Ticket##{issue} with commit log message"
+        end
+end
+

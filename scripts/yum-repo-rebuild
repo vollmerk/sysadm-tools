@@ -1,0 +1,4 @@
+#!/bin/bash
+## The 'stupid' part of this is you need to copy the [HASH]-comps.xml in ./repodata to ./ as it gets mangled by
+## createrepo otherwise
+createrepo -g /opt/rhel/comps.xml /opt/rhel/

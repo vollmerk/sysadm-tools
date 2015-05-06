@@ -1,0 +1,58 @@
+#!/usr/bin/env ruby
+
+require 'shellwords'
+
+
+# Read in the arguments passed should be [repo path] [start commit] [end commit] [ref]
+info = ARGV
+
+# Pull out the environment based on the 6th part of the repo path
+environment = info.at(0).split('/').at(6)
+repo_path = info.at(0)
+repo = info.at(0).split('/').at(7)[0..-5]
+
+# Move to the repo directory
+Dir.chdir repo_path
+
+# If this is the 'production' environment, don't touch anything
+# Else update the /etc/puppet/environment/#{ENV} folder from git if the environment exists
+if environment == "production"
+        puts "Prod/Outage commit ignoring"
+elsif File.directory?("/etc/puppet/environments/#{environment}")
+        puts "#{environment} environment updated"
+        `git --git-dir=#{repo_path} --work-tree=/etc/puppet/environments/#{environment} checkout -f`
+end
+
+
+## Figure out if we're going to E-mail OTRS on this, and if we are potentially parse out
+## The extranious commits / clean up the body of the commit message
+## LOGIC: 
+## If production, then only e-mail merge commit message don't re-check other commits
+if environment == "production"
+	## Tease out the Merge commit message and ignore the rest
+	## we'll also want to try to clean up the merge request
+	log = `git log #{info.at(3)}~1..#{info.at(3)}`.gsub(/commit\s[A-Za-z\d]+/,'') 
+	if log.index(/.*#(\d+).*/) != nil
+		issue = log.scan(/.*#(\d+).*/).last.first
+		commit_url = "GITLAB Merge: https://localdomain/gitlab/#{environment}/#{repo}/commit/#{info.at(2)}"
+		subject = "[Ticket##{issue}] GITLAB Merged to Production"
+		cmd = "echo #{Shellwords.escape(log+"\n"+commit_url)} | mailx -r \"GITLAB <gitlab@localdomain>\" -s \"#{subject}\" support@localdomain"
+		`#{cmd}`
+		puts "E-mail ticket update for Ticket##{issue} with commit log message"
+	end
+else
+	## Non-Prod so deveoplment commit, check and update OTRS as needed
+	revisions = `git rev-parse #{info.at(3)} | git rev-list --stdin #{info.at(1)}..#{info.at(2)}`.split("\n")
+	for index in 0 ... revisions.size
+		rev = revisions[index]
+		log = `git log #{rev}~1..#{rev} | sed '1,3d'` 
+		if log.index(/.*#(\d+).*\Z/) != nil
+			issue = log.scan(/.*#(\d+).*\Z/).last.first
+			commit_url = "GITLAB Commit: https://localdomain/gitlab/#{environment}/#{repo}/commit/#{rev}"
+			subject = "[Ticket##{issue}] GITLAB Development commit"
+	                cmd = "echo #{Shellwords.escape(log+"\n"+commit_url)} | mailx -r \"GITLAB <gitlab@localdomain>\" -s \"#{subject}\" support@localdomain"
+	                `#{cmd}`
+	                puts "E-mail ticket Update for Ticket##{issue} with commit log message"
+		end
+	end
+end

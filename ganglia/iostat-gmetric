@@ -1,0 +1,23 @@
+#!/usr/bin/python
+# vim: set softtabstop=2 ts=2 sw=2 expandtab: 
+
+import os,subprocess
+
+iostat_cmd = 'iostat -d -x -k 10 2 | tail -n +4'
+iostat_run = subprocess.Popen(iostat_cmd,stdout=subprocess.PIPE,shell=True)
+(out,err) = iostat_run.communicate()
+
+output_lines = out.split("\n")
+live_data = False
+for i in range(len(output_lines)):
+ # Only count data past first 'Device:'
+ if live_data == True and len(output_lines[i]) > 1 :
+  metric = output_lines[i].split()
+  device = metric[0]
+  for i in range(len(metric[1:])):
+    gmetric_cmd = 'gmetric -c /etc/ganglia/gmond.conf --name="%s" --value="%s" --type="float" --units="%s"' % ('disk_' + device + '_' + headers[i+1],metric[i+1],headers[i+1])
+    print gmetric_cmd
+ elif 'Device:' in output_lines[i]:
+  live_data = True
+  headers = output_lines[i].replace('%','').replace('/','_per_').split()
+

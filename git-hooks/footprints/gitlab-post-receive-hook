@@ -25,6 +25,13 @@ end
 ## Manage the submission to Footprints, we have to use e-mail addresses
 ## here so this is a little cheesy, might be a better way to do this
 
+## Check to make sure it's not the first commit
+first_rev = `git rev-list --max-parents=0 HEAD`
+if first_rev == info.at(2) 
+	puts "Initial Commit, skipping proccessing"
+	exit(0)
+end
+
 # Set the FROM: address based on the "environment", if nothing is found use "gitlab" 
 # but it won't be able to issue commands then :(
 case environment
@@ -33,6 +40,8 @@ case environment
 	else
 		email = "GITLAB <gitlab@localdomain>"
 end
+
+
 
 # Right now just use the research-computing environment, but we should
 # Detect merges and handle them properly so we don't re-submit existing
@@ -53,6 +62,8 @@ if environment == "production"
 else
         ## Non-Prod so deveoplment commit, check and update FOOTPRINTS as needed
 	## Attempt to tease our URL and add it to the message body https://hpc.dal.ca/gitlab/[ENV]/[REPO]/commit/[###]
+	
+
         revisions = `git rev-parse #{info.at(3)} | git rev-list --stdin #{info.at(1)}..#{info.at(2)}`.split("\n")
         for index in 0 ... revisions.size
                 rev = revisions[index]

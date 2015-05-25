@@ -16,7 +16,7 @@ for i in range(len(output_lines)):
   device = metric[0]
   for i in range(len(metric[1:])):
     gmetric_cmd = 'gmetric -c /etc/ganglia/gmond.conf --name="%s" --value="%s" --type="float" --units="%s"' % ('disk_' + device + '_' + headers[i+1],metric[i+1],headers[i+1])
-    print gmetric_cmd
+    `gmetric_cmd`
  elif 'Device:' in output_lines[i]:
   live_data = True
   headers = output_lines[i].replace('%','').replace('/','_per_').split()

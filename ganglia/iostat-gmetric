@@ -25,6 +25,8 @@ output_lines = out.split("\n")
 live_data = False
 aggregate = {}
 
+unit_name = {'util':'Percent','await':'Milliseconds','r_await':'Milliseconds','w_await':'Milliseconds','rrqms':'Read Requests','wrqms':'Write Requests','rs':'Reads','ws':'Writes','rkBs':'Read Kilobytes per Second','wkBs':'Write Kilobytes per Second','avgrq-sz':'Queue','avgqu-sz':'Queue','svctm':' '}
+
 for i in range(len(output_lines)):
  # Only count data past first 'Device:'
  if live_data == True and len(output_lines[i]) > 1 :
@@ -34,12 +36,7 @@ for i in range(len(output_lines)):
     if aggregate.has_key(headers[i+1]) == False:
       aggregate[headers[i+1]] = float()
     aggregate[headers[i+1]] = float(metric[i+1]) + float(aggregate[headers[i+1]])
-    if name == 'util':
-      units = 'Percent'
-    elif name == 'await':
-      units = 'Milliseconds'
-    else:
-      units = 'Kilobytes'
+    units = unit_name[headers[i+1]]
     for gmetric in gmetrics:
       gmetric.send(device+ '_' +headers[i+1],float(metric[i+1]),TYPE='float',UNITS=units,SPOOF=spoof,GROUP='disk')
  elif 'Device:' in output_lines[i]:
@@ -47,11 +44,6 @@ for i in range(len(output_lines)):
   headers = output_lines[i].replace('%','').replace('/','').split()
 
 for name in aggregate.iterkeys():
-  if name == 'util':
-    units = 'Percent'
-  elif name == 'await':
-    units = 'Milliseconds'
-  else:
-    units = 'Kilobytes'
+  units = unit_name[headers[i+1]]
   for gmetric in gmetrics:
     gmetric.send('total_' +name,aggregate[name],TYPE='float',UNITS=units,SPOOF=spoof,GROUP='disk')

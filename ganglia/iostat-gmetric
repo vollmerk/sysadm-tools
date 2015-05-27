@@ -44,6 +44,6 @@ for i in range(len(output_lines)):
   headers = output_lines[i].replace('%','').replace('/','').split()
 
 for name in aggregate.iterkeys():
-  units = unit_name[headers[i+1]]
+  units = unit_name[name]
   for gmetric in gmetrics:
     gmetric.send('total_' +name,aggregate[name],TYPE='float',UNITS=units,SPOOF=spoof,GROUP='disk')

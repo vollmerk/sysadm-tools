@@ -15,9 +15,9 @@ Dir.chdir repo_path
 
 # If this is the 'production' environment, don't touch anything
 # Else update the /etc/puppet/environment/#{ENV} folder from git
-if environment == "production"
+if environment == "production" and repo.strip == "puppet"
         puts "Production Environment commit ignoring"
-elsif File.directory?("/etc/puppet/environments/#{environment}")
+elsif File.directory?("/etc/puppet/environments/#{environment}") and repo.strip == "puppet"
         puts "#{environment} environment updated"
         `git --git-dir=#{repo_path} --work-tree=/etc/puppet/environments/#{environment} checkout -f`
 end
@@ -27,7 +27,7 @@ end
 
 ## Check to make sure it's not the first commit
 first_rev = `git rev-list --max-parents=0 HEAD`
-if first_rev == info.at(2) 
+if first_rev.strip == info.at(2) 
 	puts "Initial Commit, skipping proccessing"
 	exit(0)
 end

@@ -102,9 +102,30 @@ class puppetwebhook(BaseHTTPRequestHandler):
         log.info('do_POST:: %s is a protected environment, halting',gitlab_project_base)
       else:
         """ Run the git pull, create directory if required """
+        self.environment_sync(gitlab_project_base,data['repository']['git_ssh_url'])
+
       
     else:
       log.debug('do_POST:: %s not in JSON, ignoring',Config.get('main','project_name'))
+
+  """
+    environment_sync:: takes a project base and a SSH repo url, create directory and
+     clone git repo if it doesn't exist, if it exists then just do a git pull
+  """
+  def environment_sync(self,environment,git_ssh_url):
+
+    """ Check for path existance """
+    if os.path.exists(os.path.join(Config.get('main','puppet_env_dir'),environment)):
+      log.debug('environment_sync:: %s exists, doing git pull',os.path.join(Config.get('main','puppet_env_dir'),environment))
+      """ Switch to the directory, so git pull acts like you'd expect - git bugs prevent out of path pulls """
+      os.chdir(os.path.join(Config.get('main','puppet_env_dir'),environment))
+      output = self.run_cmd('git pull')
+    else:
+      """ If it doesn't exist, ch to base and git clone it! """
+      os.chdir(Config.get('main','puppet_env_dir'))
+      log.info('environment_sync:: %s does not exist, cloning into new directory',environment)
+      output = self.run_cmd('git clone %s %s',git_ssh_url,environment)
+
 
 """ 
  Main:: Run it! 

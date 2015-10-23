@@ -65,6 +65,10 @@ class puppetwebhook(BaseHTTPRequestHandler):
     """ Check for non zero return code, and log error """
     if proc.returncode != 0:
       log.critical('run_cmd:: Non-zero exit code:%s executing: %s' % (proc.returncode,cmd))
+      log.critical('run_cmd:: %s',proc.stdout.read())
+    else:
+      log.info('run_cmd:: %s executed sucessfully',cmd)
+      log.debug('run_cmd:: %s',proc.stdout.read())
     return proc.stdout
 
   """

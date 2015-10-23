@@ -66,7 +66,7 @@ class puppetwebhook(BaseHTTPRequestHandler):
               for now we're just going to log it!
   """
   def do_POST(self):
-    log.debug('do_POST:: Received post, processing')
+    log.info('do_POST:: Received post, processing')
 
     """ Read in the json string """
     self.rfile._sock.settimeout(10)
@@ -80,11 +80,11 @@ class puppetwebhook(BaseHTTPRequestHandler):
     self.send_header('Content-length',str(len(message)))
     self.end_headers()
     self.wfile.write(message)
-    log.debug('do_POST:: HTTP200 sent to gitlab, connection should be closed')
+    log.info('do_POST:: HTTP200 sent to gitlab, connection should be closed')
 
     """ Parse received json """
     data = json.loads(json_string)
-    data = json.dumps(text,indent=2)
+    data = json.dumps(data,indent=2)
 
     """ Look for our defined puppet project in the json """
     if Config.get('main','project_name') in data:

@@ -32,8 +32,14 @@ Config.read(os.path.dirname(os.path.abspath(__file__)) + '/webhook-puppet.conf')
 
 ## Init Logging, use values from config we store 7 historical copies by
 ## defualt, maybe move that into the config?
+if Config.get('main','log_level') == 'DEBUG':
+  log_level = logging.DEBUG
+elif Config.get('main','log_level') == 'INFO':
+  log_level = logging.INFO
+else:
+  log_level = logging.WARNING
 log = logging.getLogger('log')
-log.setLevel(Config.get('main','log_level'))
+log.setLevel(log_level)
 log_handle = logging.handlers.RotatingFileHandler(Config.get('main','log_file'),maxBytes=Config.get('main','log_max_size'),backupCount=7)
 log_format = logging.Formatter("%(asctime)s %(levelname)s %(message)s","%B %d %H:%M:%S")
 log_handle.setFormatter(log_format)
@@ -80,16 +86,23 @@ class puppetwebhook(BaseHTTPRequestHandler):
     self.send_header('Content-length',str(len(message)))
     self.end_headers()
     self.wfile.write(message)
-    log.info('do_POST:: HTTP200 sent to gitlab, connection should be closed')
+    log.debug('do_POST:: HTTP 200 sent to gitlab, connection should be closed')
 
     """ Parse received json """
     data = json.loads(json_string)
-    data = json.dumps(data,indent=2)
 
     """ Look for our defined puppet project in the json """
-    if Config.get('main','project_name') in data:
-      log.debug('do_POST:: %s detected in JSON, processing',Config.get('main','project_name'))
+    if data['repository']['name'] == Config.get('main','project_name'):
+      log.info('do_POST:: %s detected in JSON, processing',Config.get('main','project_name'))
 
+      """ Make sure we're not dealing with a protected/prohibited user/env """
+      gitlab_project_base = data['repository']['git_http_url'].split('/')[3]
+      log.debug('do_POST:: Detected %s Gitlab Project/User path',gitlab_project_base)
+      if gitlab_project_base in Config.get('main','protected_environments'):
+        log.info('do_POST:: %s is a protected environment, halting',gitlab_project_base)
+      else:
+        """ Run the git pull, create directory if required """
+      
     else:
       log.debug('do_POST:: %s not in JSON, ignoring',Config.get('main','project_name'))
 

@@ -1,8 +1,11 @@
 #!/usr/bin/env python
-#
+# vim: set softtabstop=2 ts=2 sw=2 expandtab: 
 #
 # Copyright (c) 2015 Dalhousie University
 # Copyright (c) 2015 Karl Vollmer (karl.vollmer@gmail.com)
+#
+# This code was based on and Inspired by https://github.com/shawn-sterling/gitlab-webhook-receiver 
+# Copyright (C) 2012 Shawn Sterling <shawn@systemtemplar.org>
 # 
 # This program is free software; you can redistribute it and/or
 # modify it under the terms of the GNU General Public License v2
@@ -17,11 +20,91 @@
 # along with this program; if not, write to the Free Software
 # Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
 
-import os,errno,sys
+import os,errno,sys,re,subprocess
 import ConfigParser
+import logging,logging.handlers
+import json
 from BaseHTTPServer import BaseHTTPRequestHandler, HTTPServer
 
 ## Load the Config file ./webhook-puppet.conf
 Config = ConfigParser.ConfigParser()
 Config.read(os.path.dirname(os.path.abspath(__file__)) + '/webhook-puppet.conf')
+
+## Init Logging, use values from config we store 7 historical copies by
+## defualt, maybe move that into the config?
+log = logging.getLogger('log')
+log.setLevel(Config.get('main','log_level'))
+log_handle = logging.handlers.RotatingFileHandler(Config.get('main','log_file'),maxBytes=Config.get('main','log_max_size'),backupCount=7)
+log_format = logging.Formatter("%(asctime)s %(levelname)s %(message)s","%B %d %H:%M:%S")
+log_handle.setFormatter(log_format)
+log.addHandler(log_handle)
+
+## Define what our webserver is going to do
+class puppetwebhook(BaseHTTPRequestHandler): 
+
+  """
+    log_message: disable output, everything is logged to file
+  """
+  def log_message(self,formate,*args):
+    return
+
+  """
+    run_cmd: Runs a CLI command as a sub-proccess does our GIT commands
+  """
+  def run_cmd(self,cmd):
+    log.debug('run_cmd:: %s' % cmd)
+    """ Run the command, and then wait for it to finish """
+    proc = subprocess.Popen(cmd.split(),stdout=subprocess.PIPE,stderr=subprocess.STDOUT)
+    proc.wait()
+    """ Check for non zero return code, and log error """
+    if proc.returncode != 0:
+      log.critical('run_cmd:: Non-zero exit code:%s executing: %s' % (proc.returncode,cmd))
+    return proc.stdout
+
+  """
+    de_POST: Handles incoming post from gitlab webhook, decode json and do something about it
+              for now we're just going to log it!
+  """
+  def do_POST(self):
+    log.debug('do_POST:: Received post, processing')
+
+    """ Read in the json string """
+    self.rfile._sock.settimeout(10)
+    json_string = self.rfile.read(int(self.headers['Content-Length']))
+    log.debug('do_POST:: Received Json String %s',json_string)
+
+    """ We're going to say we're ok regardless of what actually happens """
+    message = 'OK'
+    self.send_response(200)
+    self.send_header('Content-type','text')
+    self.send_header('Content-length',str(len(message)))
+    self.end_headers()
+    self.wfile.write(message)
+    log.debug('do_POST:: HTTP200 sent to gitlab, connection should be closed')
+
+    """ Parse received json """
+    data = json.loads(json_string)
+    data = json.dumps(text,indent=2)
+
+    """ Look for our defined puppet project in the json """
+    if Config.get('main','project_name') in data:
+      log.debug('do_POST:: %s detected in JSON, processing',Config.get('main','project_name'))
+
+    else:
+      log.debug('do_POST:: %s not in JSON, ignoring',Config.get('main','project_name'))
+
+""" 
+ Main:: Run it! 
+"""
+def main():
+  try:
+    server = HTTPServer(('',int(Config.get('main','http_port'))),puppetwebhook)
+    log.info(':Main:: Starting HTTP Server on port %s',Config.get('main','http_port'))
+    server.serve_forever()
+  except KeyboardInterrupt:
+    log.info(':Main:: Ctrl-C Detected, shutting down')
+    server.socket.close()
+
+if __name__ == '__main__':
+  main()
 

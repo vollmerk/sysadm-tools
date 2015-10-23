@@ -31,7 +31,8 @@ log_max_size=50331648
 
 ; log_level
 ; Logging level, DEBUG is default or now
-log_level=logging.DEBUG
+; Valid Levels: CRITICAL,ERROR,WARNING,INFO,DEBUG
+log_level=DEBUG
 
 ; puppet_env_dir
 ; Puppet environment directory, default of /etc/puppet/environments, all projects

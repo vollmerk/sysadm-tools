@@ -1,0 +1,8 @@
+#!/bin/bash
+# First is source, second is target file
+# Converts Line Breaks into ','
+TMPFILE="${2}.tmp"
+cat $1 | sed ':a;N;$!ba;s/\n/\x27,\x27/g' > ${TMPFILE}
+echo "'" > $2
+cat ${TMPFILE} > $2
+rm ${TMPFILE}

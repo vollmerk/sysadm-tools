@@ -1,0 +1,104 @@
+#!/usr/bin/env python
+# vim: set softtabstop=2 ts=2 sw=2 expandtab: 
+#
+# Copyright (c) 2015 Dalhousie University
+# Copyright (c) 2015 Karl Vollmer (karl.vollmer@gmail.com)
+#
+# Code Inspired by http://gridscheduler.sourceforge.net/howto/scripting.html 
+# 
+# This program is free software; you can redistribute it and/or
+# modify it under the terms of the GNU General Public License v2
+# as published by the Free Software Foundation.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program; if not, write to the Free Software
+# Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
+
+"""
+ This script works by capturing the EDITOR env variable and intercepting
+ qconf -msconf and qconf -sconf, this script effectively calls itself
+ Before doing so it sets the EDITING env varibale, so most work is done
+ withing the resulting if block. There is an assumption that the proper
+ env variables are already set in the shell
+"""
+
+import argparse,sys,os,time
+import subprocess
+
+""" Check for INLINE, if not set set to '' """
+try:
+  os.environ['INLINEEDITACTIVE']
+except KeyError:
+  os.environ['INLINEEDITACTIVE'] = ''
+
+""" Verify that we have all of the required environment variables """
+try:
+  os.environ['SGE_CELL']
+  os.environ['SGE_ROOT']
+except KeyError:
+  print "Error: Missing Environment variables SGE_CELL and SGE_ROOT must be set"
+  sys.exit(1)
+
+
+parser = argparse.ArgumentParser(description='Modify qconf -sconf and -msconf via CLI',prog='inline-edit',epilog="(c) 2015 - Dalhousie University,Karl Vollmer <karl.vollmer@gmail.com>")
+parser.add_argument('-f',nargs=1,help='Complete conf file dump',dest='configfile')
+parser.add_argument('-t',nargs=1,choices=['mc','msconf'],help='Select scheduler or complex for inline editing',dest='conf')
+parser.add_argument('qconftmp',metavar='TMPFILE',nargs='?',help='Temp file passed by qconf command')
+if len(sys.argv)==1 and not os.environ['INLINEEDITACTIVE']:
+  parser.print_help()
+  sys.exit(1)
+
+""" Load in the arguments """
+args=parser.parse_args()
+
+"""
+ If we haven't called ourselves yet, then we need to do that and quit
+"""
+if not os.environ['INLINEEDITACTIVE']:
+  """ Our target app won't have the same environment, so we need to make sure full paths were used """
+  os.environ['INLINEEDITACTIVE'] = '1'
+  os.environ['EDITOR'] = os.path.dirname(os.path.abspath(__file__)) + '/inline-edit'
+  os.environ['INLINEFILE'] = args.configfile[0]
+  if args.conf[0] == 'mc':
+    cmd = 'qconf -Mc'
+  else:
+    cmd = 'qconf -Msconf'
+  print ':inline-edit:: Running %s and outputing contents of %s' % (cmd,os.environ['INLINEFILE'])
+  try:
+    proc = subprocess.Popen(cmd.split(),stdout=subprocess.PIPE,stderr=subprocess.STDOUT,env=dict(os.environ))
+    proc.wait()
+    if proc.returncode != 0:
+      print "Non-zero return code: %s from %s" % (proc.returncode,cmd)
+      print proc.stdout.read()
+    else:
+      print "%s executed successfully, output: %s" % (cmd,proc.stdout.read())
+    sys.exit(proc.returncode)
+  except OSError:
+    print ':inline-edit:: OS Error attempting to run %s' % (cmd)
+    sys.exit(1)
+
+""" 
+ Main part of the program, this happens if we haven't called ourselves
+"""
+if os.environ['INLINEEDITACTIVE'] == '1':
+  try:
+    newconfhandle = open(os.environ['INLINEFILE'],'r')
+  except IOError:
+    print "Unable to read %s access denied or file not found" % (os.environ['INLINEFILE'])
+    sys.exit(1)
+
+  """ Echo out the entire file contents and quit """
+  newconf = newconfhandle.read()
+  try:
+    tmpconfhandle = open(args.qconftmp,'w')
+  except IOError:
+    print "Unable to open %s for writing access denied or file not found" % (args.qconftmp)
+    sys.exit(1)
+  tmpconfhandle.write(newconf)
+  time.sleep( 1 )
+  sys.exit(0)

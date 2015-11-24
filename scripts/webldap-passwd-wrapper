@@ -1,7 +1,18 @@
 #!/usr/bin/env python
 # vim: set softtabstop=2 ts=2 sw=2 expandtab: 
 import urllib,urllib2
+import sys,getpass
 
+"""
+ This attempts to mimic the Linux/Unix passwd
+ functionality but re-directs it to the PHP based
+ LDAP password changing web app located at 
+ http://ltb-project.org/wiki/documentation/self-service-password
+
+ You'll need to change url to the full path of your
+ password reset website. This will not work if you've
+ enabled captcha :)
+"""
 
 def send_post (username,oldpass,newpass,confirmpass):
   url = '#'
@@ -19,6 +30,36 @@ def send_post (username,oldpass,newpass,confirmpass):
   thePage = response.read()
   print thePage
 
+def prompt_user(text):
+  try: 
+    results = getpass.getpass(text+':')
+  except:
+    print 'Invalid input, password not changed'
+    sys.exit(1)
+
+  return results
 
 if __name__ == '__main__':
-  send_post('cheese','noodle','pasta','buttons')
+  try: 
+    username = getpass.getuser()
+  except:
+    print 'Unable to identify current user, exiting'
+    sys.exit(1)
+
+  """ attempt LDAP bind with current pw to save us some trouble? """
+  currentPassword = prompt_user('Enter current password')
+  """ Confirm new and retyped match - Do we want to check complexity here?  """
+  newPassword = prompt_user('Enter new password')
+
+  if newPassword == currentPassword:
+    print "Old and New password can not be the same"
+    sys.exit(1)
+
+  confirmPassword = prompt_user('Retype new password')
+
+  if newPassword != confirmPassword:
+    print "New passwords do not match"
+    sys.exit(1)
+
+  sys.exit(1)
+  send_post(username,currentPassword,newPassword,confirmPassword)

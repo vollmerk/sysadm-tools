@@ -1,0 +1,79 @@
+#!/usr/bin/env python
+# vim: set softtabstop=2 ts=2 sw=2 expandtab:
+"""
+ * LICENSE: GNU General Public License, version 2 (GPLv2)
+ * Copyright (c) 2001 - 2011 Ampache.org All Rights Reserved
+ *
+ * This program is free software; you can redistribute it and/or
+ * modify it under the terms of the GNU General Public License v2
+ * as published by the Free Software Foundation.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program; if not, write to the Free Software
+ * Foundation, Inc., 59 Temple Place - Suite 330, Boston, MA  02111-1307, USA.
+ *
+ * Copyright (C) Karl Vollmer <karl.vollmer@gmail.com>
+"""
+
+import dns.zone
+import dns.resolver
+from dns.exception import DNSException
+from dns.rdatatype import *
+from dns.rdataclass import *
+import os.path
+import dns.ipv4,dns.ipv6
+import sys
+
+def getDnsResponse(name,recordType):
+  try:
+    dnsDataSet = dnsResolver.query(name,recordType)
+  except:
+    print 'DNS Server error, or refused to answer query, exiting'
+    sys.exit(1)
+  return dnsDataSet
+
+
+""" Read in the zone file as defined by the first cli argument, domain by second """
+zone_file = sys.argv[1]
+domain = sys.argv[2]
+print "Loading zone file %s for verification of %s domain" % (zone_file,domain)
+
+""" Load the Resolver """
+global dnsResolver
+dnsResolver = dns.resolver.Resolver()
+dnsResolver.nameservers = [str(sys.argv[3])]
+print "Initilized resolver for DNS queries using %s as data source" % (str(sys.argv[3]))
+
+""" Attempt to read the zone file """
+try:
+  zone = dns.zone.from_file(zone_file,domain)
+except DNSException, e:
+  print "Unable to load data from zone file %s :: %s" % (e.__class__,e)
+
+""" Itterate through the items in this zone file """
+for name,node in zone.nodes.items():
+  recordDataSet = node.rdatasets
+  if str(name) == '@':
+    name = domain
+  else: 
+    name = str(name) + '.' + domain + '.'
+  for recordData in recordDataSet:
+      if recordData.rdtype == SOA:
+        serverData = getDnsResponse(name,'SOA')
+      elif recordData.rdtype == MX:
+        serverData = getDnsResponse(name,'MX')
+      elif recordData.rdtype == NS:
+        serverData = getDnsResponse(name,'NS')
+      elif recordData.rdtype == CNAME:
+        serverData = getDnsResponse(name,'CNAME')
+      elif recordData.rdtype == A:
+        serverData = getDnsResponse(name,'A')
+      elif recordData.rdtype == AAAA:
+        serverData = getDnsResponse(name,'AAAA')
+      else:
+        print "Unknown record type %s manually verify" % (recordData.rdtype)

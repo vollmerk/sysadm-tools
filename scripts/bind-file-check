@@ -63,8 +63,31 @@ for name,node in zone.nodes.items():
   else: 
     name = str(name) + '.' + domain + '.'
   for recordData in recordDataSet:
+    for recordItem in recordData:
       if recordData.rdtype == SOA:
         serverData = getDnsResponse(name,'SOA')
+        for serverRecord in serverData:
+          matchCount = 0
+          """ Break on space """
+          serverItems = str(serverRecord).split()
+          if str(recordItem.serial) == str(serverItems[2]):
+            matchCount += 1
+          if int(recordItem.retry) == int(serverItems[4]):
+            matchCount += 1
+          if int(recordItem.refresh) == int(serverItems[3]):
+            matchCount += 1
+          if str(recordItem.rname) + '.' + domain + '.' == str(serverItems[1]):
+            matchCount += 1
+          if str(recordItem.mname) + '.' + domain + '.' == str(serverItems[0]):
+            matchCount += 1
+          if int(recordItem.expire) == int(serverItems[5]):
+            matchCount += 1
+          if int(recordItem.minimum) == int(serverItems[6]):
+            matchCount += 1
+          if matchCount == 7:
+            print "SOA Matches"
+          else:
+            print "Error SOA match not found for %s %s/7 matched" % (recordItem,matchCount)
       elif recordData.rdtype == MX:
         serverData = getDnsResponse(name,'MX')
       elif recordData.rdtype == NS:

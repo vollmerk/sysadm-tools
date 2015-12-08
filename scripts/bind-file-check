@@ -64,6 +64,7 @@ for name,node in zone.nodes.items():
     name = str(name) + '.' + domain + '.'
   for recordData in recordDataSet:
     for recordItem in recordData:
+      itemFound = False
       if recordData.rdtype == SOA:
         serverData = getDnsResponse(name,'SOA')
         for serverRecord in serverData:
@@ -85,15 +86,40 @@ for name,node in zone.nodes.items():
           if int(recordItem.minimum) == int(serverItems[6]):
             matchCount += 1
           if matchCount == 7:
-            print "SOA Matches"
-          else:
-            print "Error SOA match not found for %s %s/7 matched" % (recordItem,matchCount)
+            itemFound = True
+        if not itemFound:
+          print "Error SOA match not found for %s" % (recordItem)
       elif recordData.rdtype == MX:
         serverData = getDnsResponse(name,'MX')
+        for serverRecord in serverData:
+          matchCount = 0
+          """ Split on space """
+          serverItems = str(serverRecord).split()
+          if int(recordItem.preference) == int(serverItems[0]):
+            matchCount += 1
+          if str(recordItem.exchange) + '.' + domain + '.' == str(serverItems[1]):
+            matchCount += 1
+          if matchCount == 2:
+            itemFound = True
+        if not itemFound:
+          print "Error MX match not found for %s" % (recordItem)
       elif recordData.rdtype == NS:
         serverData = getDnsResponse(name,'NS')
+        for serverRecord in serverData:
+          serverItems = str(serverRecord).split()
+          if str(recordItem) == str(serverItems[0]):
+            itemFound = True
+          elif str(recordItem) + '.' + domain + '.' == str(serverItems[0]):
+            itemFound = True
+        if not itemFound:
+          print "Error NS match not found for %s" % (recordItem)
       elif recordData.rdtype == CNAME:
         serverData = getDnsResponse(name,'CNAME')
+        for serverRecord in serverData:
+          print recordData.to_text
+          matchCount = 0
+          print recordItem
+          print serverRecord
       elif recordData.rdtype == A:
         serverData = getDnsResponse(name,'A')
       elif recordData.rdtype == AAAA:

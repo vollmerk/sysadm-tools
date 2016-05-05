@@ -1,5 +1,7 @@
 #!/usr/bin/env python
 # vim: set softtabstop=2 ts=2 sw=2 expandtab: 
+# Licensed under the GNUGPLv2 
+# Copyright Karl Vollmer <karl.vollmer@gmail.com> 2016
 import mailbox
 import ConfigParser 
 from dateutil import parser

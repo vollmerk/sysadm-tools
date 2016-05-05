@@ -49,12 +49,12 @@ if __name__ == '__main__':
     date = parser.parse(message['Date'])
     unixtimestamp = int(time.mktime(date.timetuple()))
   
-    REdmnbtech = re.compile('.*' + Config.get('main','from') . + '.*',re.IGNORECASE)
+    REdmnbtech = re.compile('.*' + Config.get('main','from') + '.*',re.IGNORECASE)
     """ If we find an e-mail from the address in question """
     if REdmnbtech.search(message['From']):
-      print 'E-mail Found, checking to make sure we have not already sent it'
+      print ':Main:: E-mail Found, checking to make sure we have not already sent it'
       if unixtimestamp > int(time.time())-int(Config.get('main','croninterval')):
-        print 'E-mail is newer then the last time we ran, proccessing'
+        print ':Main:: E-mail is newer then the last time we ran, proccessing'
         slack = slackweb.Slack(url=Config.get('main','slackurl'))
         attachments = []
         attachment = {'title':message['subject'],'text':getbodyfromemail(message)}

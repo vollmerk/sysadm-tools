@@ -1,0 +1,63 @@
+#!/usr/bin/env python
+# vim: set softtabstop=2 ts=2 sw=2 expandtab: 
+import mailbox
+import ConfigParser 
+from dateutil import parser
+import time,slackweb,re,html2text,os
+
+""" Crappy Get body of email function """
+def getbodyfromemail(msg):
+  body = None
+  #Walk through the parts of the email to find the text body.    
+  if msg.is_multipart():    
+    for part in msg.walk():
+      # If part is multipart, walk through the subparts.            
+      if part.is_multipart(): 
+        for subpart in part.walk():
+          if subpart.get_content_type() == 'text/plain':
+            # Get the subpart payload (i.e the message body)
+            body = subpart.get_payload(decode=True) 
+          # Part isn't multipart so get the email body
+          elif part.get_content_type() == 'text/plain':
+            body = part.get_payload(decode=True)
+  # If this isn't a multi-part message then get the payload (i.e the message body)
+  elif msg.get_content_type() == 'text/plain':
+    body = msg.get_payload(decode=True) 
+  elif msg.get_content_type() == 'text/html':
+    body = html2text.html2text(msg.get_payload(decode=True))
+  return body    
+
+
+if __name__ == '__main__':
+  """ Load the config """
+  Config = ConfigParser.ConfigParser()
+  try:
+    Config.read(os.path.dirname(os.path.abspath(__file__)) + '/slackmailbot.conf')
+  except IOError:
+    print ':Main:: IOError opening %s verify permissions' % (os.path.dirname(os.path.abspath(__file__)) + '/slackmailbot.conf')
+    sys.exit(1)
+
+  """ Try to open up the mailspool as configured """
+  try:
+    mbox = mailbox.mbox(Config.get('main','mailspool'))
+  except:
+    print ':Main:: Unable to open mail spool %s' % (Config.get('main','mailspool'))
+    sys.exit(1)
+
+  """ Look through the mail spool """
+  for message in mbox:
+    date = parser.parse(message['Date'])
+    unixtimestamp = int(time.mktime(date.timetuple()))
+  
+    REdmnbtech = re.compile('.*' + Config.get('main','from') . + '.*',re.IGNORECASE)
+    """ If we find an e-mail from the address in question """
+    if REdmnbtech.search(message['From']):
+      print 'E-mail Found, checking to make sure we have not already sent it'
+      if unixtimestamp > int(time.time())-int(Config.get('main','croninterval')):
+        print 'E-mail is newer then the last time we ran, proccessing'
+        slack = slackweb.Slack(url=Config.get('main','slackurl'))
+        attachments = []
+        attachment = {'title':message['subject'],'text':getbodyfromemail(message)}
+        attachments.append(attachment)
+        slack.notify(text='E-mail Notification - ' + message['From'],attachments=attachments)
+

@@ -1,0 +1,15 @@
+[main]
+
+; URL For your slack webhook
+slackurl=
+
+; From E-mail to trigger on
+from=root@localhost
+
+; Mail spool to read 
+; Right now this only does mailspools
+mailspool=/var/spool/mail/root
+
+; Cron Interval, how often is this running - only print e-mails that have come in since the last run
+; This is in seconds, so 120 = 2min 900 = 15min, 1800 = 30min
+croninterval=120

@@ -53,7 +53,7 @@ if __name__ == '__main__':
   
     REdmnbtech = re.compile('.*' + Config.get('main','from') + '.*',re.IGNORECASE)
     """ If we find an e-mail from the address in question """
-    if REdmnbtech.search(message['From']):
+    if REdmnbtech.search(message['To']):
       print ':Main:: E-mail Found, checking to make sure we have not already sent it'
       if unixtimestamp > int(time.time())-int(Config.get('main','croninterval')):
         print ':Main:: E-mail is newer then the last time we ran, proccessing'

@@ -7,6 +7,6 @@ Checks a local mail spool for a specific e-mail FROM: pattern, if found fires it
 #### Requirements
 It requires the following python modules. 
 
-* slackweb
+* slackweb https://github.com/satoshi03/slack-python-webhook
 * html2text
 * re, os, mailbox, ConfigParser

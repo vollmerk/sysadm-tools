@@ -9,4 +9,5 @@ It requires the following python modules.
 
 * slackweb https://github.com/satoshi03/slack-python-webhook
 * html2text
+* tzlocal
 * re, os, mailbox, ConfigParser

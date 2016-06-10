@@ -54,14 +54,17 @@ if __name__ == '__main__':
     REdmnbtech = re.compile('.*' + Config.get('main','to') + '.*',re.IGNORECASE)
     """ If we find an e-mail from the address in question """
     if REdmnbtech.search(message['To']):
-      print ':Main:: E-mail Found, checking to make sure we have not already sent it'
+      if Config.get('main','debug') != 'false':
+        print ':Main:: E-mail Found, checking to make sure we have not already sent it'
       if unixtimestamp > int(time.time())-int(Config.get('main','croninterval')):
-        print ':Main:: E-mail is newer then the last time we ran, proccessing'
+        if Config.get('main','debug') != 'false':
+          print ':Main:: E-mail is newer then the last time we ran, proccessing'
         slack = slackweb.Slack(url=Config.get('main','slackurl'))
         attachments = []
         attachment = {'title':message['subject'],'text':getbodyfromemail(message)}
         attachments.append(attachment)
         slack.notify(text='E-mail Notification - ' + message['From'],attachments=attachments)
       else:
-        print ':Main:: E-mail is not newer, do not push to slack'
+        if Config.get('main','debug') != 'false':
+          print ':Main:: E-mail is not newer, do not push to slack'
 

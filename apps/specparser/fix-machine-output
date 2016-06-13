@@ -106,7 +106,7 @@ if __name__ == '__main__':
         dataCsv.writerow(rowDict)
         rowDict.clear()
       elif len(row[1]):
-        rowDict[row[1]+'_ppm']          = re.sub("[^0-9]",'',row[2])
+        rowDict[row[1]+'_ppm']          = re.sub("[^0-9\.]",'',row[2])
         rowDict[row[1]+'_Uncertainty']  = row[3]
         rowDict[row[1]+'_Peak']         = row[4]
         rowDict[row[1]+'_Background']   = row[5]

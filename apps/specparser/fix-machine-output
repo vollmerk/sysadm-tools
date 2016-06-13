@@ -20,7 +20,7 @@ if __name__ == '__main__':
   try:
     if optArgs.targetType[0] == 'ba':
       interval = 4
-      rowStart = 22
+      rowStart = 21
     elif optArgs.targetType[0] == 'mz':
       interval = 7
       rowStart = 21
@@ -29,7 +29,7 @@ if __name__ == '__main__':
     try:
       if 'Ce,' in open(optArgs.targetFile[0]).read():
         interval = 4
-        rowStart = 22
+        rowStart = 21
         print 'BA Filetype detected, if this is incorrect please specify using -t mz'
       else:
         interval = 7
@@ -69,46 +69,37 @@ if __name__ == '__main__':
     print 'Unable to open %s file for writing' % (dataFilename)
 
   if interval == 4:
-    dataFields = ['Spec_id','Ba_ppm','La_ppm','Ce_ppm','Ba_Uncertainty','La_Uncertainty','Ce_Uncertainty','Ba_Peak','La_Peak','Ce_Peak','Ba_Background','La_Background','Ce_Background']
+    dataFields = ['Spec_id','Ba_ppm','La_ppm','Ce_ppm','Ba_Uncertainty','La_Uncertainty','Ce_Uncertainty','Ba_Peak','La_Peak','Ce_Peak','Ba_Background','La_Background','Ce_Background','Notes']
   else:
-    dataFields = ['Spec_id','Rb_ppm','Sr_ppm','Y_ppm','Zr_ppm','Nb_ppm','Rb_Uncertainty','Sr_Uncertainty','Y_Uncertainty','Zr_Uncertainty','Nb_Uncertainty','Rb_Peak','Sr_Peak','Y_Peak','Zr_Peak','Nb_Peak','Rb_Background','Sr_Background','Y_Background','Zr_Background','Nb_Background']
+    dataFields = ['Spec_id','Rb_ppm','Sr_ppm','Y_ppm','Zr_ppm','Nb_ppm','Rb_Uncertainty','Sr_Uncertainty','Y_Uncertainty','Zr_Uncertainty','Nb_Uncertainty','Rb_Peak','Sr_Peak','Y_Peak','Zr_Peak','Nb_Peak','Rb_Background','Sr_Background','Y_Background','Zr_Background','Nb_Background','Notes']
 
   paramCsv = csv.writer(paramFile,delimiter=',')
   dataCsv = csv.DictWriter(dataFile, fieldnames=dataFields)
   dataCsv.writeheader()
   rowCount=0
-  rowDict={}
+  rowDict={'Notes':''}
   for row in csvreader:
 
-    """ Make sure there is something in this array """
-    if len(row) == 0:
-      #print "Less than 6 elements in row, invalid source data file skipping line %s" % (rowCount)
-      rowCount = rowCount + 1
-      continue
-    elif len(row) == 1 and row[0] == 'Results':
-      rowStart = rowCount + 3
-      rowCount = rowCount + 1
-      continue
-    elif (rowCount > rowStart) and len(row) == 1:
-      """ This is the screwed up non-csv file header row """
-      rowDict['Spec_id'] = row[0]
-      dataCsv.writerow(rowDict)
-      rowDict.clear()
-      rowCount = rowCount + 1
-      continue
-    
-    if (rowCount < 17):
+    if (rowCount < 18):
       paramCsv.writerow(row)
     elif (rowCount > rowStart):
-      """ minus 22 every X rows, combined """
-      if ((rowCount - rowStart)/float(interval) == math.floor((rowCount - rowStart)/float(interval))) and interval == 7:
+      if len(row) == 1:
         rowDict['Spec_id'] = row[0]
+      elif len(row) == 0:
+        """ Empty Rows preceed the next header """
         dataCsv.writerow(rowDict)
         rowDict.clear()
+        rowDict['Notes'] = ''
       elif len(row[1]):
-        rowDict[row[1]+'_ppm']          = re.sub("[^0-9\.]",'',row[2])
+        if '[' in row[2]:
+          rowDict['Notes'] = rowDict['Notes'] + row[1] + ' PPM Is below threshold, %s ' % (row[2])
+          rowDict[row[1]+'_ppm'] = '0'
+        else:
+          rowDict[row[1]+'_ppm']          = re.sub("[^0-9\.]",'',row[2])
         rowDict[row[1]+'_Uncertainty']  = row[3]
         rowDict[row[1]+'_Peak']         = row[4]
         rowDict[row[1]+'_Background']   = row[5]
     rowCount = rowCount + 1
+  """ Write out the final dataset """
+  dataCsv.writerow(rowDict)
 print "Proccessing complete output %s and %s :: Proccessed %s lines" % (paramFilename,dataFilename,rowCount)

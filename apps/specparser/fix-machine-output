@@ -1,34 +1,62 @@
 #!/usr/bin/env python
 # vim: set softtabstop=2 ts=2 sw=2 expandtab: 
 import csv,sys,os
-import math,re
+import math,re,argparse
 
 if __name__ == '__main__':
 
+  """ Check for arguments """
+  optParse = argparse.ArgumentParser(description='Fix spec-machine output, create useable csv file',prog='fix-machine-output',epilog='(c) 2016 - Karl Vollmer <vollmer@oregonstate.edu>')
+  optParse.add_argument('-f',nargs=1,help='Source file to parse',dest='targetFile')
+  optParse.add_argument('-t',nargs=1,choices=['ba','mz'],help='Source File format, if not auto-detected',dest='targetType')
+  optParse.add_argument('-d',nargs=1,help='Source directory to parse',dest='targetDir')
+  optParse.add_argument('-od',nargs=1,help='Target directory for output',dest='outputDir')
+  if len(sys.argv) == 1:
+    optParse.print_help()
+    sys.exit(1)
+
+  optArgs = optParse.parse_args()
+  """ Attempt to detect which file type this is, if it's not defined """
   try:
-    if sys.argv[2] == 'ba':
+    if optArgs.targetType[0] == 'ba':
       interval = 4
       rowStart = 22
-  except IndexError:
-    interval = 7
-    rowStart = 21
+    elif optArgs.targetType[0] == 'mz':
+      interval = 7
+      rowStart = 21
+  except:
+    """ Attempt ot autodetect """
+    try:
+      if 'Ce,' in open(optArgs.targetFile[0]).read():
+        interval = 4
+        rowStart = 22
+        print 'BA Filetype detected, if this is incorrect please specify using -t mz'
+      else:
+        interval = 7
+        rowStart = 21
+        print 'MZ Filetype detected, if this is incorrect please specify using -t ba'
+    except:
+      print 'Unable to determine type of %s please specify using -t {ba,mz}' % (optArgs.targetFile[0])
+      sys.exit(1)
   
 
   """ Open the csv file for reading """
   try: 
-    csvfile = open(sys.argv[1],'rb')
+    csvfile = open(optArgs.targetFile[0],'rb')
   except IOError:
-    print 'Unable to open %s file unreadable or not found' % (sys.argv[1])
+    print 'Unable to open %s file unreadable or not found' % (optArgs.targetFile[0])
+    sys.exit(1)
 
   try:
     csvreader = csv.reader(csvfile,delimiter=',')
   except:
-    print '%s is an invalid or unreadable csv file' % (sys.argv[1])
+    print '%s is an invalid or unreadable csv file' % (optArgs.targetFile[0])
+    sys.exit(1)
 
-  print 'Reading %s' % (sys.argv[1])
+  print 'Reading %s' % (optArgs.targetFile)
 
-  paramFilename = sys.argv[1][:-4] + '-params.csv'
-  dataFilename  = sys.argv[1][:-4] + '-data.csv'
+  paramFilename = optArgs.targetFile[0][:-4] + '-params.csv'
+  dataFilename  = optArgs.targetFile[0][:-4] + '-data.csv'
 
   try:
     paramFile = open(paramFilename,'wb')
@@ -51,8 +79,6 @@ if __name__ == '__main__':
   rowCount=0
   rowDict={}
   for row in csvreader:
-    print row
-    print str(rowCount) + ' -- LEN:' + str(len(row))
 
     """ Make sure there is something in this array """
     if len(row) == 0:
@@ -67,7 +93,6 @@ if __name__ == '__main__':
       """ This is the screwed up non-csv file header row """
       rowDict['Spec_id'] = row[0]
       dataCsv.writerow(rowDict)
-      print 'Write row LEN 1'
       rowDict.clear()
       rowCount = rowCount + 1
       continue
@@ -79,7 +104,6 @@ if __name__ == '__main__':
       if ((rowCount - rowStart)/float(interval) == math.floor((rowCount - rowStart)/float(interval))) and interval == 7:
         rowDict['Spec_id'] = row[0]
         dataCsv.writerow(rowDict)
-        print 'Write row'
         rowDict.clear()
       elif len(row[1]):
         rowDict[row[1]+'_ppm']          = re.sub("[^0-9]",'',row[2])

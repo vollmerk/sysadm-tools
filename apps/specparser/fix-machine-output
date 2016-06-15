@@ -9,8 +9,6 @@ if __name__ == '__main__':
   optParse = argparse.ArgumentParser(description='Fix spec-machine output, create useable csv file',prog='fix-machine-output',epilog='(c) 2016 - Karl Vollmer <vollmer@oregonstate.edu>')
   optParse.add_argument('-f',nargs=1,help='Source file to parse',dest='targetFile')
   optParse.add_argument('-t',nargs=1,choices=['ba','mz'],help='Source File format, if not auto-detected',dest='targetType')
-  optParse.add_argument('-d',nargs=1,help='Source directory to parse',dest='targetDir')
-  optParse.add_argument('-od',nargs=1,help='Target directory for output',dest='outputDir')
   if len(sys.argv) == 1:
     optParse.print_help()
     sys.exit(1)
@@ -82,15 +80,25 @@ if __name__ == '__main__':
 
     if (rowCount < 18):
       paramCsv.writerow(row)
-    elif (rowCount > rowStart):
+    elif (rowCount >= rowStart):
+      """ for invalid csv files, if row length is 1 element """
       if len(row) == 1:
         rowDict['Spec_id'] = row[0]
       elif len(row) == 0:
-        """ Empty Rows preceed the next header """
+        """ invalid csv file, empty row preceeds header """
         dataCsv.writerow(rowDict)
         rowDict.clear()
         rowDict['Notes'] = ''
-      elif len(row[1]):
+      elif len(row[0]) > 0 and len(row[1]) == 0:
+        """ valid csv files If row[0] has stuff, but [1] is empty """
+        rowDict['Spec_id'] = row[0]
+      elif len(row[0]) == 0 and len(row[1]) == 0:
+        """ valid csv file, first two elements empty preceeds next header """
+        dataCsv.writerow(rowDict)
+        rowDict.clear()
+        rowDict['Notes'] = ''
+      elif len(row[1]) < 4:
+        """ all should have [1] if none of the above are true """
         if '[' in row[2]:
           rowDict['Notes'] = rowDict['Notes'] + row[1] + ' PPM Is below threshold, %s ' % (row[2])
           rowDict[row[1]+'_ppm'] = '0'
